@@ -24,7 +24,7 @@ pub struct Arg {
     help: String,
     action: ArgAction,
     required: bool,
-    pub parser: Box<dyn ValueParser>,
+    parser: Box<dyn ValueParser>,
     value_type: TypeId,
     conflicts: Vec<String>,
 }

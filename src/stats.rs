@@ -1,7 +1,10 @@
 use std::ops::AddAssign;
 
+use crate::langs::lang_type::LangType;
+
 #[derive(Debug, Default, Clone)]
 pub struct FileStat {
+    pub lang: LangType,
     pub path: String,
     pub name: String,
     pub size: u64,
@@ -16,8 +19,9 @@ pub struct FileStat {
 }
 
 impl FileStat {
-    pub fn new(path: String, name: String) -> Self {
+    pub fn new(lang: LangType, path: String, name: String) -> Self {
         Self {
+            lang,
             path,
             name,
             ..Default::default()
@@ -25,27 +29,15 @@ impl FileStat {
     }
 }
 
-impl AddAssign for FileStat {
-    fn add_assign(&mut self, other: Self) {
-        self.lines += other.lines;
-        self.code += other.code;
-        self.comments += other.comments;
-        self.blanks += other.blanks;
-        self.functions += other.functions;
-        self.classes += other.classes;
-        self.size += other.size;
-    }
-}
-
 #[derive(Debug, Default, Clone)]
 pub struct LangStat {
-    pub lang: String,
+    pub lang: LangType,
     pub files: usize,
-
     pub lines: usize,
     pub code: usize,
     pub comments: usize,
     pub blanks: usize,
+
     pub functions: usize,
     pub classes: usize,
 
@@ -53,21 +45,24 @@ pub struct LangStat {
 }
 
 impl LangStat {
-    pub fn new(lang: String) -> Self {
+    pub fn new(lang: LangType) -> Self {
         LangStat {
             lang,
             ..Default::default()
         }
     }
+}
 
-    pub fn add(&mut self, other: &LangStat) {
+impl AddAssign for LangStat {
+    fn add_assign(&mut self, other: Self) {
         self.files += other.files;
         self.lines += other.lines;
         self.code += other.code;
         self.comments += other.comments;
         self.blanks += other.blanks;
         self.functions += other.functions;
-
+        self.classes += other.classes;
+        
         self.stats.extend_from_slice(&other.stats);
     }
 }

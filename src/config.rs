@@ -48,14 +48,15 @@ impl Config {
     pub fn new() -> Self {
 
         let paths = vec![".".to_string()];
-        let types = SUPPORTED_LANGUAGES.iter().map(|s| s.to_string()).collect();
+        let types = SUPPORTED_LANGUAGES.iter().map(|s| s.to_string().to_lowercase()).collect();
+        let exclude_files = vec![".git".to_string(), "target".to_string(), "node_modules".to_string(), "dist".to_string(), "build".to_string()];
 
         Config {
             paths,
             types,
             ignore_blanks: false,
             ignore_comments: false,
-            exclude_files: Vec::new(),
+            exclude_files,
             show_stats: false,
             output: OutputFormat::Text,
             help: false,

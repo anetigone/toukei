@@ -1,347 +1,121 @@
 use lazy_static::lazy_static;
 use strum::VariantNames;
-use crate::langs::lang_type::LangType;
-use crate::langs::lang_def::LangDef;
+use regex::{Regex, RegexSet};
+
+use std::collections::HashMap;
+
+use super::lang_type::LangType;
+use super::lang_def::LangDef;
+use super::definitions::*;
 
 lazy_static! {
     pub static ref SUPPORTED_LANGUAGES: Vec<&'static str> = LangType::VARIANTS.to_vec();
 
-    pub static ref LANG_DEFINITIONS: Vec<&'static LangDef> = vec![
-        &RUST_DEF,
-        &CPP_DEF,
-        &GO_DEF,
-        &PY_DEF,
-        &JS_DEF,
-        &C_DEF,
-        &CS_DEF,
-        &JAVA_DEF,
-        &SWIFT_DEF,
-        &KOTLIN_DEF,
-        &DART_DEF,
-        &SH_DEF,
-        &PERL_DEF,
-        &RUBY_DEF,
-        &LUA_DEF,
-        &SQL_DEF,
-        &TS_DEF,
-        &PHP_DEF,
-        &MARKDOWN_DEF,
-        &HTML_DEF,
-        &CSS_DEF,
-        &JSON_DEF,
-        &XML_DEF,
-        &YAML_DEF,
-        &TOML_DEF,
-        &TEXT_DEF,
-    ];
+    pub static ref LANGUAGE_DEFINITIONS: HashMap<LangType, &'static LangDef> = {
+        let mut map = HashMap::new();
+        
+        map.insert(LangType::Asciidoc, &ASCIIDOC);
+        map.insert(LangType::Astro, &ASTRO);
+        map.insert(LangType::C, &C);
+        map.insert(LangType::Clojure, &CLOJURE);
+        map.insert(LangType::Cpp, &CPP);
+        map.insert(LangType::Csharp, &CSHARP);
+        map.insert(LangType::Css, &CSS);
+        map.insert(LangType::D, &D);
+        map.insert(LangType::Dart, &DART);
+        map.insert(LangType::Elm, &ELM);
+        map.insert(LangType::Erlang, &ERLANG);
+        map.insert(LangType::Fsharp, &FSHARP);
+        map.insert(LangType::Go, &GO);
+        map.insert(LangType::Graphql, &GRAPHQL);
+        map.insert(LangType::H, &C);
+        map.insert(LangType::Hpp, &CPP);
+        map.insert(LangType::Haskell, &HASKELL);
+        map.insert(LangType::Html, &HTML);
+        map.insert(LangType::Java, &JAVA);
+        map.insert(LangType::Javascript, &JAVASCRIPT);
+        map.insert(LangType::Json, &JSON);
+        map.insert(LangType::Jsonnet, &JSONNET);
+        map.insert(LangType::Julia, &JULIA);
+        map.insert(LangType::Kotlin, &KOTLIN);
+        map.insert(LangType::Lua, &LUA);
+        map.insert(LangType::Markdown, &MARKDOWN);
+        map.insert(LangType::Nix, &NIX);
+        map.insert(LangType::Ocaml, &OCAML);
+        map.insert(LangType::Php, &PHP);
+        map.insert(LangType::Python, &PYTHON);
+        map.insert(LangType::Qcl, &QCL);
+        map.insert(LangType::Qsharp, &QSHARP);
+        map.insert(LangType::R, &R);
+        map.insert(LangType::Regex, &REGEX);
+        map.insert(LangType::Ruby, &RUBY);
+        map.insert(LangType::Rust, &RUST);
+        map.insert(LangType::Sass, &SASS);
+        map.insert(LangType::Scala, &SCALA);
+        map.insert(LangType::Sql, &SQL);
+        map.insert(LangType::Swift, &SWIFT);
+        map.insert(LangType::Tcl, &TCL);
+        map.insert(LangType::Tex, &TEX);
+        map.insert(LangType::Toml, &TOML);
+        map.insert(LangType::Typescript, &TYPESCRIPT);
+        map.insert(LangType::V, &V);
+        map.insert(LangType::WenYan, &WENYAN);
+        map.insert(LangType::Xml, &XML);
+        map.insert(LangType::Yaml, &YAML);
+        map.insert(LangType::Zig, &ZIG);
+        map.insert(LangType::Shell, &SHELL); 
+        map.insert(LangType::Perl, &PERL);
+        map.insert(LangType::Text, &TEXT);
+        map
+    };
 
-    pub static ref LANG_DEF_MAP: std::collections::HashMap<&'static str, &'static LangDef> = {
-        let mut map = std::collections::HashMap::new();
-        for def in LANG_DEFINITIONS.iter() {
-            map.insert(def.name, *def);
+    pub static ref FUNCTION_REGEX_MAP: HashMap<LangType, RegexSet> = {
+        let mut map = HashMap::new();
+
+        for (k, v) in LANGUAGE_DEFINITIONS.iter() {
+            let set = RegexSet::new(v.function_patterns).unwrap();
+            map.insert(*k, set);
         }
+
+        map
+    };
+
+    pub static ref CLASS_REGEX_MAP: HashMap<LangType, RegexSet> = {
+        let mut map = HashMap::new();
+
+        for (k, v) in LANGUAGE_DEFINITIONS.iter() {
+            let set = RegexSet::new(v.class_patterns).unwrap();
+            map.insert(*k, set);
+        }
+
+        map
+    };
+
+    pub static ref EXT_LANG_MAP: HashMap<String, LangType> = {
+        let mut map = HashMap::new();
+
+        for (k, v) in LANGUAGE_DEFINITIONS.iter() {
+            for ext in v.extensions.iter() {
+                map.insert(ext.to_string(), *k);
+            }
+        }
+
         map
     };
 }
 
-pub static RUST_DEF: LangDef = LangDef {
-        name: "Rust",
-        extensions: &["rs"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("///"),
-        function_patterns: &[
-            r"^\s*fn\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(->\s*[^\{]*)?\s*\{",
-            r"^\s*pub\s+fn\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(->\s*[^\{]*)?\s*\{",
-        ],
-        class_pattern: Some(r"^\s*(pub\s+)?struct\s+[a-zA-Z0-9_]+"),
-    };
+pub fn get_lang_def(lang_type: &LangType) -> Option<&'static LangDef> {
+    LANGUAGE_DEFINITIONS.get(lang_type).copied()
+}
 
-pub static CPP_DEF: LangDef = LangDef {
-        name: "Cpp",
-        extensions: &["cpp", "cc", "cxx", "hpp", "h"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("///"),
-        function_patterns: &[
-            r"^\s*[a-zA-Z0-9_\*&<>\[\]]+\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(const\s*)?\s*\{",
-            r"^\s*void\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(const\s*)?\s*\{",
-        ],
-        class_pattern: Some(r"^\s*class\s+[a-zA-Z0-9_]+"),
-    };
+pub fn get_function_regex(lang_type: &LangType) -> Option<&RegexSet> {
+    FUNCTION_REGEX_MAP.get(lang_type)
+}
 
-pub static GO_DEF: LangDef = LangDef {
-        name: "Go",
-        extensions: &["go"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("///"),
-        function_patterns: &[
-            r"^\s*func\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{",
-            r"^\s*func\s+\([^)]*\)\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{",
-        ],
-        class_pattern: Some(r"^\s*type\s+[a-zA-Z0-9_]+\s+(struct|interface)\s*\{"),
-    };
+pub fn get_class_regex(lang_type: &LangType) -> Option<&RegexSet> {
+    CLASS_REGEX_MAP.get(lang_type)
+}
 
-pub static PY_DEF: LangDef = LangDef {
-        name: "Python",
-        extensions: &["py"],
-        line_comment: Some("#"),
-        block_comment: Some(("\"\"\"", "\"\"\"")),
-        doc_comment: Some("'''"),
-        function_patterns: &[
-            r"^\s*def\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*:",
-            r"^\s*async\s+def\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*:",
-        ],
-        class_pattern: Some(r"^\s*class\s+[a-zA-Z0-9_]+")
-    };  
-
-pub static JS_DEF: LangDef = LangDef {
-        name: "JavaScript",
-        extensions: &["js"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("/**"),
-        function_patterns: &[
-            r"^\s*function\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{",
-            r"^\s*const\s+[a-zA-Z0-9_]+\s*=\s*\([^)]*\)\s*=>",
-            r"^\s*let\s+[a-zA-Z0-9_]+\s*=\s*\([^)]*\)\s*=>",
-            r"^\s*var\s+[a-zA-Z0-9_]+\s*=\s*\([^)]*\)\s*=>",
-            r"^\s*[a-zA-Z0-9_]+\s*=\s*\([^)]*\)\s*=>",
-        ],
-        class_pattern: Some(r"^\s*(export\s+)?class\s+[a-zA-Z0-9_]+"),
-    };
-
-pub static C_DEF: LangDef = LangDef {
-        name: "C",
-        extensions: &["c"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("///"),
-        function_patterns: &[
-            r"^\s*[a-zA-Z0-9_\*&\[\]]+\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{",
-            r"^\s*void\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{",
-        ],
-        class_pattern: None,
-    };
-
-pub static CS_DEF: LangDef = LangDef {
-        name: "CSharp",
-        extensions: &["cs"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("///"),
-        function_patterns: &[
-            r"^\s*(public\s+|private\s+|protected\s+)?(static\s+)?[a-zA-Z0-9_<>,\[\]]+\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{",
-            r"^\s*(public\s+|private\s+|protected\s+)?(static\s+)?void\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{",
-        ],
-        class_pattern: Some(r"^\s*(public\s+|private\s+|protected\s+)?class\s+[a-zA-Z0-9_]+"),
-    };
-
-pub static JAVA_DEF: LangDef = LangDef {
-        name: "Java",
-        extensions: &["java"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("/**"),
-        function_patterns: &[
-            r"^\s*(public\s+|private\s+|protected\s+)?(static\s+)?[a-zA-Z0-9_<>,\[\]]+\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(\{|\{[^;]*\{)",
-            r"^\s*(public\s+|private\s+|protected\s+)?(static\s+)?void\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(\{|\{[^;]*\{)",
-        ],
-        class_pattern: Some(r"^\s*(public\s+|private\s+|protected\s+)?class\s+[a-zA-Z0-9_]+"),
-    };
-
-pub static SWIFT_DEF: LangDef = LangDef {
-        name: "Swift",
-        extensions: &["swift"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("///"),
-        function_patterns: &[
-            r"^\s*func\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(->\s*[^{]*)?\s*\{",
-        ],
-        class_pattern: Some(r"^\s*class\s+[a-zA-Z0-9_]+"),
-    };
-
-pub static KOTLIN_DEF: LangDef = LangDef {
-        name: "Kotlin",
-        extensions: &["kt"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("///"),
-        function_patterns: &[
-            r"^\s*fun\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(->\s*[^{]*)?\s*\{",
-        ],
-        class_pattern: Some(r"^\s*class\s+[a-zA-Z0-9_]+"),
-    };
-
-pub static DART_DEF: LangDef = LangDef {
-        name: "Dart",
-        extensions: &["dart"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("///"),
-        function_patterns: &[
-            r"^\s*[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{",
-        ],
-        class_pattern: Some(r"^\s*class\s+[a-zA-Z0-9_]+"),
-    };
-
-pub static SH_DEF: LangDef = LangDef {
-        name: "Shell",
-        extensions: &["sh", "bash"],
-        line_comment: Some("#"),
-        block_comment: None,
-        doc_comment: None,
-        function_patterns: &[],
-        class_pattern: None,
-    };
-
-pub static PERL_DEF: LangDef = LangDef {
-        name: "Perl",
-        extensions: &["pl"],
-        line_comment: Some("#"),
-        block_comment: None,
-        doc_comment: None,
-        function_patterns: &[],
-        class_pattern: None,
-    };
-
-pub static RUBY_DEF: LangDef = LangDef {
-        name: "Ruby",
-        extensions: &["rb"],
-        line_comment: Some("#"),
-        block_comment: Some(("=begin", "=end")),
-        doc_comment: None,
-        function_patterns: &[
-            r"^\s*def\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{",
-        ],
-        class_pattern: Some(r"^\s*class\s+[a-zA-Z0-9_]+"),
-    };
-
-pub static LUA_DEF: LangDef = LangDef {
-        name: "Lua",
-        extensions: &["lua"],
-        line_comment: Some("--"),
-        block_comment: Some(("--[[", "]]")),
-        doc_comment: None,
-        function_patterns: &[
-            r"^\s*function\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{",
-        ],
-        class_pattern: Some(r"^\s*class\s+[a-zA-Z0-9_]+"),
-    };
-
-pub static SQL_DEF: LangDef = LangDef {
-        name: "SQL",
-        extensions: &["sql"],
-        line_comment: Some("--"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: None,
-        function_patterns: &[],
-        class_pattern: None,
-    };
-
-pub static TS_DEF: LangDef = LangDef {
-        name: "TypeScript",
-        extensions: &["ts"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("///"),
-        function_patterns: &[
-            r"^\s*(public\s+|private\s+|protected\s+)?(static\s+)?[a-zA-Z0-9_<>,\[\]]+\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(\{|\{[^;]*\{)",
-            r"^\s*(public\s+|private\s+|protected\s+)?(static\s+)?void\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*(\{|\{[^;]*\{)",
-        ],
-        class_pattern: Some(r"^\s*(public\s+|private\s+|protected\s+)?class\s+[a-zA-Z0-9_]+"),
-    };
-
-pub static PHP_DEF: LangDef = LangDef {
-        name: "PHP",
-        extensions: &["php"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("///"),
-        function_patterns: &[
-            r"^\s*function\s+[a-zA-Z0-9_]+\s*\([^)]*\)\s*\{",
-        ],
-        class_pattern: Some(r"^\s*class\s+[a-zA-Z0-9_]+"),
-    };
-
-pub static MARKDOWN_DEF: LangDef = LangDef {
-        name: "Markdown",
-        extensions: &["md", "markdown"],
-        line_comment: None,
-        block_comment: None,
-        doc_comment: None,
-        function_patterns: &[],
-        class_pattern: None,
-    };
-
-pub static HTML_DEF: LangDef = LangDef {
-        name: "HTML",
-        extensions: &["html"],
-        line_comment: Some("<!--"),
-        block_comment: Some(("<!--", "-->")),
-        function_patterns: &[],
-        class_pattern: None,
-        doc_comment: None,
-    };
-
-pub static CSS_DEF: LangDef = LangDef {
-        name: "CSS",
-        extensions: &["css"],
-        line_comment: Some("//"),
-        block_comment: Some(("/*", "*/")),
-        doc_comment: Some("///"),
-        function_patterns: &[],
-        class_pattern: None,
-    };
-
-pub static JSON_DEF:LangDef =     LangDef {
-        name: "JSON",
-        extensions: &["json"],
-        line_comment: None,
-        block_comment: None,
-        doc_comment: None,
-        class_pattern: None,
-        function_patterns: &[],
-    };
-
-pub static XML_DEF: LangDef = LangDef {
-        name: "XML",
-        extensions: &["xml"],
-        line_comment: Some("<!--"),
-        block_comment: Some(("<!--", "-->")),
-        doc_comment: None,
-        class_pattern: None,
-        function_patterns: &[],
-    };
-
-pub static YAML_DEF: LangDef = LangDef {
-        name: "YAML",
-        extensions: &["yaml", "yml"],
-        line_comment: Some("#"),
-        block_comment: None,
-        doc_comment: None,
-        class_pattern: None,
-        function_patterns: &[],
-    };
-
-pub static TOML_DEF: LangDef = LangDef {
-        name: "TOML",
-        extensions: &["toml"],
-        line_comment: Some("#"),
-        block_comment: None,
-        doc_comment: None,
-        class_pattern: None,
-        function_patterns: &[],
-    };
-
-pub static TEXT_DEF: LangDef = LangDef {
-        name: "Text",
-        extensions: &["txt"],
-        line_comment: None,
-        block_comment: None,
-        doc_comment: None,
-        class_pattern: None,
-        function_patterns: &[],
-    };
+pub fn get_type_from_ext(ext: &str) -> Option<LangType> {
+    EXT_LANG_MAP.get(ext).copied()
+}

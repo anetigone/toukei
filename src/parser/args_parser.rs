@@ -10,6 +10,37 @@ use crate::parser::arg_cursor::ArgCursor;
 use crate::{extract_config, value_parser};
 use crate::utils::format::OutputFormat;
 
+/// 命令行参数解析器，用于定义和解析命令行参数
+///
+/// # 结构
+///
+/// `ArgParser` 包含以下核心组件：
+/// - `args`: 存储所有定义的参数，使用有序的 BTreeMap 保持参数的定义顺序
+/// - `long_arg`: 长参数名（如 `--help`）到内部参数名的映射
+/// - `short_arg`: 短参数名（如 `-h`）到内部参数名的映射
+/// - `params`: 存储解析后的参数值
+///
+/// # 功能
+///
+/// - 支持长参数（`--long`）和短参数（`-s`）格式
+/// - 支持多种参数动作：设置值、追加值、计数、设置布尔值
+/// - 类型安全的参数解析和获取
+/// - 自动生成帮助信息
+/// - 支持参数验证
+///
+/// # 示例
+///
+/// ```rust
+/// let mut parser = ArgParser::new()
+///     .arg(Arg::new("verbose")
+///         .short('v')
+///         .long("verbose")
+///         .help("启用详细输出")
+///         .action(ArgAction::SetTrue));
+///
+/// let matches = parser.build_matches(vec!["-v"])?;
+/// let verbose = matches.get_one::<bool>("verbose")?;
+/// ```
 #[derive(Debug)]
 pub struct ArgParser {
     args: BTreeMap<String, Arg>,
@@ -74,6 +105,10 @@ impl ArgParser {
         let value = arg.parse(&value)?;
 
         self.params.append(name, value, value_type)
+    }
+
+    pub fn get_args(&self) -> &BTreeMap<String, Arg> {
+        &self.args
     }
 
     pub fn get_one<T>(&self, name: &str) -> Result<&T, ParseError> 
@@ -251,7 +286,9 @@ impl Default for ArgParser {
                 .arg(Arg::new("help")
                     .short('h')
                     .long("help")
-                    .help("显示帮助信息"))
+                    .help("显示帮助信息")
+                    .parser(value_parser!(bool))
+                    .action(ArgAction::SetTrue))
                 .arg(Arg::new("path")
                     .short('p')
                     .long("path")
