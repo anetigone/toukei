@@ -1,8 +1,40 @@
 use crate::{config::Config, langs::{lang_type::LangType, registry::get_type_from_ext}, stats::FileStat, syntax::LexerFactory};
 
 use std::path::Path;
-use std::io::BufReader;
+use std::io::{BufReader, Read, Seek};
 use std::fs::File;
+
+struct LossyReader<T: Read> {
+    inner: T,
+}
+
+impl<T: Read> LossyReader<T> {
+    fn new(reader: T) -> Self {
+        Self {
+            inner: reader,
+        }
+    }
+}
+
+impl<T: Read> Read for LossyReader<T> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let mut temp_buf = vec![0; buf.len() * 4]; // Allocate more space for UTF-8 expansion
+        let bytes_read = self.inner.read(&mut temp_buf)?;
+
+        if bytes_read == 0 {
+            return Ok(0);
+        }
+
+        // Convert to lossy UTF-8, then back to bytes
+        let lossy_string = String::from_utf8_lossy(&temp_buf[..bytes_read]);
+        let lossy_bytes = lossy_string.as_bytes();
+
+        let copy_len = std::cmp::min(buf.len(), lossy_bytes.len());
+        buf[..copy_len].copy_from_slice(&lossy_bytes[..copy_len]);
+
+        Ok(copy_len)
+    }
+}
 
 #[derive(Debug)]
 pub struct Counter {
@@ -10,6 +42,17 @@ pub struct Counter {
 }
 
 impl Counter {
+    fn is_binary_file(file: &mut File) -> bool {
+        let mut buffer = [0; 1024];
+        match file.read(&mut buffer) {
+            Ok(0) => false,
+            Ok(n) => {
+                let _ = file.seek(std::io::SeekFrom::Start(0));
+                buffer.iter().take(n).any(|&b| b == 0)
+            }
+            Err(_) => false,
+        }
+    }
     pub fn new(config: Config) -> Self {
         Counter {
             config
@@ -24,8 +67,14 @@ impl Counter {
 
         let lang_type = get_type_from_ext(&ext)
             .ok_or_else(|| CounterError::LexError(format!("Unknown language for extension: {}", ext)))?;
-        let file = File::open(path.as_ref()).map_err(|e| CounterError::IoError(e.to_string()))?;
-        let mut reader = BufReader::new(file);
+        let mut file = File::open(path.as_ref()).map_err(|e| CounterError::IoError(e.to_string()))?;
+
+        if Self::is_binary_file(&mut file) {
+            return Err(CounterError::BinaryFile);
+        }
+
+        let lossy_reader = LossyReader::new(file);
+        let mut reader = BufReader::new(lossy_reader);
         let lexer = LexerFactory::get_lexer(lang_type)
             .ok_or_else(|| CounterError::LexError("Unknown language".to_string()))?;
 
@@ -45,6 +94,7 @@ impl Counter {
 pub enum CounterError {
     IoError(String),
     LexError(String),
+    BinaryFile,
 }
 
 impl std::fmt::Display for CounterError {
@@ -52,6 +102,7 @@ impl std::fmt::Display for CounterError {
         match self {
             CounterError::IoError(msg) => write!(f, "IO Error: {}", msg),
             CounterError::LexError(msg) => write!(f, "Lexing Error: {}", msg),
+            CounterError::BinaryFile => write!(f, "Binary file detected"),
         }
     }
 }
@@ -69,6 +120,6 @@ mod tests {
 
         assert_eq!(stat.path, "./src/counter.rs");
         assert_eq!(stat.name, "counter.rs");
-        assert_eq!(stat.lines, 41);
+        assert_eq!(stat.lines, 125);
     }
 }

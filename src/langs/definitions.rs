@@ -1,4 +1,4 @@
-use crate::{langs::lang_def::LangDef, stats};
+use crate::langs::lang_def::LangDef;
 
 pub static ASCIIDOC: LangDef = LangDef {
     name: "AsciiDoc",
@@ -151,6 +151,18 @@ pub static GRAPHQL: LangDef = LangDef {
     class_patterns: &["type\\s+\\w+"],
 };
 
+pub static H: LangDef = LangDef {
+    name: "C Header",
+    extensions: &["h"],
+    line_comment: Some("//"),
+    block_comment: Some(("/*", "*/")),
+    doc_comment: None,
+    function_patterns: &[
+        r"\w+\s+\w+\s*\([^)]*\)\s*;", 
+        r"\w+\s+\*\w+\s*\([^)]*\)\s*;"],
+    class_patterns: &["typedef\\s+struct\\s+\\w+"],
+};
+
 pub static HASKELL: LangDef = LangDef {
     name: "Haskell",
     extensions: &["hs", "lhs"],
@@ -169,6 +181,19 @@ pub static HTML: LangDef = LangDef {
     doc_comment: None,
     function_patterns: &["<script", "<function"],
     class_patterns: &["class\\s*=\\s*\""],
+};
+
+pub static HPP: LangDef = LangDef {
+    name: "C++ Header",
+    extensions: &["hpp", "hxx", "hh", "h++"],
+    line_comment: Some("//"),
+    block_comment: Some(("/*", "*/")),
+    doc_comment: Some("/**"),
+    function_patterns: &[
+        r"\w+\s+\w+\s*\([^)]*\)\s*\{",
+        r"\w+\s+\*\w+\s*\([^)]*\)\s*\{", 
+        r"\w+\s+&\w+\s*\([^)]*\)\s*\{"],
+    class_patterns: &[r"class\s+\w+"],
 };
 
 pub static JAVA: LangDef = LangDef {

@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 use strum::VariantNames;
-use regex::{Regex, RegexSet};
+use regex::RegexSet;
 
 use std::collections::HashMap;
 
@@ -28,8 +28,8 @@ lazy_static! {
         map.insert(LangType::Fsharp, &FSHARP);
         map.insert(LangType::Go, &GO);
         map.insert(LangType::Graphql, &GRAPHQL);
-        map.insert(LangType::H, &C);
-        map.insert(LangType::Hpp, &CPP);
+        map.insert(LangType::H, &H);
+        map.insert(LangType::Hpp, &HPP);
         map.insert(LangType::Haskell, &HASKELL);
         map.insert(LangType::Html, &HTML);
         map.insert(LangType::Java, &JAVA);

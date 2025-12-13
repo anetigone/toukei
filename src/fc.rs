@@ -4,6 +4,8 @@ use crate::stats::{FileStat, LangStat};
 use crate::counter::Counter;
 use crate::walker::FileReader;
 
+use log::warn;
+
 #[derive(Debug)]
 pub struct FileCounter {
     config: Config,
@@ -30,9 +32,15 @@ impl FileCounter {
             let files = self.reader.walk_dir(path)
                 .map_err(|e| format!("Failed to walk directory: {}", e))?;
             for file_path in files {
-                let stat = self.counter.count(&file_path)
-                    .map_err(|e| format!("Failed to count file {:?}: {}", file_path, e))?;
-                report.add(stat);
+                match self.counter.count(&file_path) {
+                    Ok(stat) => report.add(stat),
+                    Err(crate::counter::CounterError::BinaryFile) => {
+                        // Skip binary files silently
+                        warn!("Skipping binary file: {}", file_path.display());
+                        continue;
+                    }
+                    Err(e) => return Err(format!("Failed to count file {:?}: {}", file_path, e)),
+                }
             }
         }
 

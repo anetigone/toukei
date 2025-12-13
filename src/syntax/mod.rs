@@ -2,6 +2,7 @@ use crate::langs::lang_type::LangType;
 
 pub mod lex_status;
 pub mod lexer;
+pub mod classifier;
 
 pub struct LexerFactory;
 

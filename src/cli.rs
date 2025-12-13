@@ -1,7 +1,7 @@
 
-use crate::parser::args_parser::{self, ArgParser};
+use crate::parser::args_parser::ArgParser;
 
-use crate::config::{self, Config};
+use crate::config::Config;
 use crate::report::Report;
 use crate::fc::FileCounter;
 

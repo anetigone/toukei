@@ -1,7 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use rayon::prelude::*;
-use log::debug;
 use walkdir::{DirEntry, WalkDir};
 
 use crate::{config::Config, langs::{lang_type::LangType, registry::get_type_from_ext}};
@@ -114,7 +112,7 @@ mod tests {
     #[test]
     fn test_walk_dir() {
         let reader = FileReader::new(Config::new());
-        let files = reader.walk_dir(".").unwrap();
+        let files = reader.walk_dir(r"G:\Documents\GitHub\toukei").unwrap();
 
         assert!(files.len() > 0);
     }

@@ -7,7 +7,6 @@ pub struct FileStat {
     pub lang: LangType,
     pub path: String,
     pub name: String,
-    pub size: u64,
     
     pub lines: usize,
     pub code: usize,
