@@ -3,7 +3,7 @@ use std::fmt::Display;
 use crate::langs::registry::SUPPORTED_LANGUAGES;
 use crate::utils::format::OutputFormat;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct Config {
     
     pub paths: Vec<String>,
@@ -11,6 +11,8 @@ pub struct Config {
 
     pub ignore_blanks: bool,
     pub ignore_comments: bool,
+    pub enable_async: bool,
+    pub num_workers: usize,
     
     pub exclude_files: Vec<String>,
 
@@ -22,26 +24,15 @@ pub struct Config {
 impl Display for Config {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Config {{ paths: {:?}, types: {:?}, 
-            ignore_blanks: {}, ignore_comments: {}, exclude_files: {:?}, 
+            ignore_blanks: {}, ignore_comments: {}, 
+            enable_async: {}, num_workers: {}, exclude_files: {:?}, 
             show_stats: {}, output: {:?}, help: {} }}",
             self.paths,self.types,
-            self.ignore_blanks,self.ignore_comments,self.exclude_files,
+            self.ignore_blanks,self.ignore_comments,
+            self.enable_async,self.num_workers,self.exclude_files,
             self.show_stats,self.output,self.help
         )
     }   
-}
-
-impl PartialEq<Self> for Config {
-    fn eq(&self, other: &Self) -> bool {
-        self.paths == other.paths &&
-        self.types == other.types &&
-        self.ignore_blanks == other.ignore_blanks &&
-        self.ignore_comments == other.ignore_comments &&
-        self.exclude_files == other.exclude_files &&
-        self.show_stats == other.show_stats &&
-        self.output == other.output &&
-        self.help == other.help
-    }
 }
 
 impl Config {
@@ -56,10 +47,52 @@ impl Config {
             types,
             ignore_blanks: false,
             ignore_comments: false,
+            enable_async: false,
+            num_workers: 8,
             exclude_files,
             show_stats: false,
             output: OutputFormat::Text,
             help: false,
         }
+    }
+
+    pub fn with_paths(mut self, paths: Vec<String>) -> Self {
+        self.paths = paths;
+        self
+    }
+
+    pub fn with_types(mut self, types: Vec<String>) -> Self {
+        self.types = types;
+        self
+    }
+
+    pub fn with_output_format(mut self, format: OutputFormat) -> Self {
+        self.output = format;
+        self
+    }
+
+    pub fn with_num_workers(mut self, num: usize) -> Self {
+        self.num_workers = num;
+        self
+    }
+
+    pub fn with_exclude_files(mut self, files: Vec<String>) -> Self {
+        self.exclude_files = files;
+        self
+    }
+
+    pub fn enable_ignore_blanks(mut self, ignore: bool) -> Self {
+        self.ignore_blanks = ignore;
+        self
+    }
+
+    pub fn enable_ignore_comments(mut self, ignore: bool) -> Self {
+        self.ignore_comments = ignore;
+        self
+    }
+
+    pub fn enable_async_processing(mut self, enable: bool) -> Self {
+        self.enable_async = enable;
+        self
     }
 }

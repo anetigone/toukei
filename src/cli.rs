@@ -4,22 +4,22 @@ use crate::parser::args_parser::ArgParser;
 use crate::config::Config;
 use crate::report::Report;
 use crate::fc::FileCounter;
+use crate::fc::AsyncFileCounter;
 
 pub struct Cli{
     arg_parser: ArgParser,
-    
-    config: Config,
 }
 
 impl Cli {
     pub fn new() -> Self {
         Cli {
             arg_parser: ArgParser::default(),
-            config: Config::new(),
         }
     }
 
     pub fn run(&mut self) -> Result<(), String> {
+        use tokio::runtime::Runtime;
+
         let args = std::env::args().skip(1);
         let matches = self.arg_parser
             .build_matches(args)
@@ -28,38 +28,84 @@ impl Cli {
             .parse_matches(&matches)
             .map_err(|e| e.to_string())?;
 
-        let counter = FileCounter::new(config.clone());
-        let report = counter.process()?;
         if config.help {
             self.print_help();
+            return Ok(());
         }
-        else {
+
+        if config.enable_async {
+            // Async mode
+            let rt = Runtime::new()
+                .map_err(|e| format!("Failed to create async runtime: {}", e))?;
+            let report = rt.block_on(self.run_async(config))?;
+            self.print(&report);
+        } else {
+            // Sync mode
+            let counter = FileCounter::new(config.clone());
+            let report = counter.process()?;
             self.print(&report);
         }
         Ok(())
+    }
+
+    /// 异步辅助函数
+    async fn run_async(&self, config: Config) -> Result<Report, String> {
+        let mut async_counter = AsyncFileCounter::new(config.clone());
+
+        // Set custom number of workers if specified
+        if config.num_workers > 0 {
+            async_counter = async_counter.with_workers(config.num_workers);
+        }
+
+        async_counter.process()
+            .await
+            .map_err(|e| format!("Async processing failed: {}", e))
     }
 }
 
 impl Cli {
     pub fn print(&self, report: &Report) {
         self.print_divider();
+
+        // 使用更宽的列宽和对齐方式
         println!(
-        "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10}",
-        "Language", "Files", "Lines", "Blanks", "Comments", "Functions"
+            "{:<12} {:<8} {:<10} {:<10} {:<10} {:<10} {:<10}",
+            "Language", "Files", "Lines", "Code", "Comments", "Blanks", "Functions"
         );
         self.print_divider();
 
-        for (lang, stat) in report.into_iter() {
+        // 收集所有数据并按行数排序
+        let mut items: Vec<_> = report.into_iter().collect();
+        items.sort_by(|a, b| b.1.lines.cmp(&a.1.lines)); // 按行数降序排序
+
+        for (lang, stat) in items {
             println!(
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10}",
-            lang.to_string(),
-            stat.files,
-            stat.lines,
-            stat.blanks,
-            stat.comments,
-            stat.functions
+                "{:<12} {:<8} {:<10} {:<10} {:<10} {:<10} {:<10}",
+                lang.to_string(),
+                stat.files,
+                stat.lines,
+                stat.code,
+                stat.comments,
+                stat.blanks,
+                stat.functions
             );
         }
+
+        self.print_divider();
+
+        // 添加总计行
+        let total_files: usize = report.into_iter().map(|(_, s)| s.files).sum();
+        let total_lines: usize = report.into_iter().map(|(_, s)| s.lines).sum();
+        let total_code: usize = report.into_iter().map(|(_, s)| s.code).sum();
+        let total_comments: usize = report.into_iter().map(|(_, s)| s.comments).sum();
+        let total_blanks: usize = report.into_iter().map(|(_, s)| s.blanks).sum();
+        let total_functions: usize = report.into_iter().map(|(_, s)| s.functions).sum();
+
+        println!(
+            "{:<12} {:<8} {:<10} {:<10} {:<10} {:<10} {:<10}",
+            "Total", total_files, total_lines, total_code, total_comments, total_blanks, total_functions
+        );
+        self.print_divider();
     }
 
     fn print_divider(&self) {

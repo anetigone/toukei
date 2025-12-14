@@ -12,6 +12,11 @@ pub enum LineKind {
 
 pub trait Classifier: Send + Sync {
     /// 核心函数：根据上下文判断行类别
+    /// # param
+    /// - line: 行内容，包含行号、行文本、行文本长度、行文本的起始索引
+    /// # return
+    /// - LineKind: 行类别
+    /// - Option<(usize, usize)>: 如果行类别是 Mixed，则返回代码的起始和结束位置
     fn classify(&self, line: LineCtx) -> (LineKind, Option<(usize, usize)>);
 }
 

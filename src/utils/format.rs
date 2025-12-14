@@ -1,6 +1,7 @@
 use std::str::FromStr;
+use strum_macros::Display;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Display)]
 pub enum OutputFormat {
     Text,
     Json,
@@ -34,5 +35,13 @@ impl PartialEq<Self> for OutputFormat {
             (Self::Csv, Self::Csv) => true,
             _ => false,
         }
+    }
+}
+
+impl Eq for OutputFormat {}
+
+impl std::hash::Hash for OutputFormat {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.to_string().hash(state);
     }
 }

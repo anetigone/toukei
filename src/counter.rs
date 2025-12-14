@@ -1,4 +1,4 @@
-use crate::{config::Config, langs::{lang_type::LangType, registry::get_type_from_ext}, stats::FileStat, syntax::LexerFactory};
+use crate::{config::Config, langs::registry::get_type_from_ext, stats::FileStat, syntax::LexerFactory};
 
 use std::path::Path;
 use std::io::{BufReader, Read, Seek};
@@ -36,7 +36,7 @@ impl<T: Read> Read for LossyReader<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Counter {
     config: Config,
 }
@@ -87,6 +87,19 @@ impl Counter {
             .to_string();
 
         Ok(stat)
+    }
+
+    /// 异步版本的计数函数
+    pub async fn count_async(&self, path: impl AsRef<Path> + Send) -> Result<FileStat, CounterError> {
+        // 使用spawn_blocking在阻塞线程中执行同步代码
+        let path = path.as_ref().to_path_buf();
+        let config = self.config.clone();
+
+        tokio::task::spawn_blocking(move || {
+            let counter = Counter::new(config);
+            counter.count(path)
+        }).await
+        .map_err(|e| CounterError::IoError(format!("Task join error: {}", e)))?
     }
 } 
 

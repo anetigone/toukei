@@ -174,6 +174,8 @@ impl ArgParser {
             scalars: [
                 ignore_blanks <- "ignore-blanks" : bool,
                 ignore_comments <- "ignore-comments" : bool,
+                enable_async <- "enable-async" : bool,
+                num_workers <- "num-workers" : usize,
                 output <- "output" : OutputFormat,
                 help <- "help" : bool
             ]
@@ -320,6 +322,15 @@ impl Default for ArgParser {
                     .help("忽略注释行")
                     .parser(value_parser!(bool))
                     .action(ArgAction::SetTrue))
+                .arg(Arg::new("enable-async")
+                    .long("enable-async")
+                    .help("启用异步文件统计")
+                    .parser(value_parser!(bool))
+                    .action(ArgAction::SetTrue))
+                .arg(Arg::new("num-workers")
+                    .long("num-workers")
+                    .help("指定并发工作线程数,同步模式下为线程数，异步模式下为异步任务数")
+                    .parser(value_parser!(usize)))
                 .arg(Arg::new("output")
                     .short('o')
                     .long("output")
@@ -480,7 +491,7 @@ mod tests {
     fn test_matches_and_config() {
         let mut arg_parser =  ArgParser::default();
         
-        let args = vec!["--path", "/home/user", "--type", "cpp,rust", "--exclude-files", "file1,file2", "--ignore-blanks", "--ignore-comments", "--output", "json"];
+        let args = vec!["--path", "/home/user", "--type", "cpp,rust", "--exclude-files", "file1,file2", "--ignore-blanks", "--ignore-comments", "--output", "json", "--enable-async", "--num-workers", "4"];
         let result = arg_parser.build_matches(args);
         assert!(result.is_ok());
         let matches = result.unwrap();
@@ -493,6 +504,8 @@ mod tests {
             ignore_blanks: true,
             ignore_comments: true,
             exclude_files: vec!["file1".to_string(), "file2".to_string()],
+            enable_async: true,
+            num_workers: 4,
             show_stats: false,
             output: OutputFormat::Json,
             help: false

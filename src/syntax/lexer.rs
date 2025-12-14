@@ -93,7 +93,7 @@ impl<C: Classifier> DefaultLexer<C> {
                 if ch == '{' {
                     ctx.depth += 1;
                 } else if ch == '}' {
-                    ctx.depth -= ctx.depth.saturating_sub(1);
+                    ctx.depth = ctx.depth.saturating_sub(1);
                 }
             }
 

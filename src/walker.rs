@@ -4,9 +4,9 @@ use walkdir::{DirEntry, WalkDir};
 
 use crate::{config::Config, langs::{lang_type::LangType, registry::get_type_from_ext}};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileReader {
-    
+
     config: Config
 }
 
