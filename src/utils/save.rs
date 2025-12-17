@@ -1,176 +1,64 @@
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
-
 use crate::report::Report;
 use crate::utils::format::OutputFormat;
+use crate::saver::{FileSaver, SaveError};
+use crate::saver::exporter::{ReportExporter, JsonExporter, CsvExporter};
 
-/// 文件保存器，支持多种格式导出统计结果
-pub struct FileSaver;
-
-impl FileSaver {
-    /// 将报告保存到指定文件
-    pub fn save_report<P: AsRef<Path>>(
-        report: &Report,
-        path: P,
-        format: OutputFormat,
-    ) -> Result<(), SaveError> {
-        match format {
-            OutputFormat::Json => Self::save_as_json(report, path),
-            OutputFormat::Csv => Self::save_as_csv(report, path),
-            OutputFormat::Text => Err(SaveError::UnsupportedFormat),
-        }
-    }
-
-    /// 保存为 JSON 格式
-    fn save_as_json<P: AsRef<Path>>(report: &Report, path: P) -> Result<(), SaveError> {
-        let json_data = Self::report_to_json(report)?;
-        let mut file = File::create(path).map_err(SaveError::Io)?;
-        file.write_all(json_data.as_bytes()).map_err(SaveError::Io)?;
-        Ok(())
-    }
-
-    /// 保存为 CSV 格式
-    fn save_as_csv<P: AsRef<Path>>(report: &Report, path: P) -> Result<(), SaveError> {
-        let csv_data = Self::report_to_csv(report)?;
-        let mut file = File::create(path).map_err(SaveError::Io)?;
-        file.write_all(csv_data.as_bytes()).map_err(SaveError::Io)?;
-        Ok(())
-    }
-
-    /// 将报告转换为 JSON 格式字符串
-    fn report_to_json(report: &Report) -> Result<String, SaveError> {
-        let mut json_data = serde_json::json!({
-            "languages": []
-        });
-
-        // 收集并排序数据
-        let mut items: Vec<_> = report.into_iter().collect();
-        items.sort_by(|a, b| b.1.lines.cmp(&a.1.lines));
-
-        let mut languages = Vec::new();
-        let mut total_files = 0;
-        let mut total_lines = 0;
-        let mut total_code = 0;
-        let mut total_comments = 0;
-        let mut total_blanks = 0;
-        let mut total_functions = 0;
-        let mut total_classes = 0;
-
-        for (lang, stat) in items {
-            let lang_data = serde_json::json!({
-                "language": lang.to_string(),
-                "files": stat.files,
-                "lines": stat.lines,
-                "code": stat.code,
-                "comments": stat.comments,
-                "blanks": stat.blanks,
-                "functions": stat.functions,
-                "classes": stat.classes
-            });
-            languages.push(lang_data);
-
-            total_files += stat.files;
-            total_lines += stat.lines;
-            total_code += stat.code;
-            total_comments += stat.comments;
-            total_blanks += stat.blanks;
-            total_functions += stat.functions;
-            total_classes += stat.classes;
-        }
-
-        json_data["languages"] = serde_json::Value::Array(languages);
-        json_data["total"] = serde_json::json!({
-            "files": total_files,
-            "lines": total_lines,
-            "code": total_code,
-            "comments": total_comments,
-            "blanks": total_blanks,
-            "functions": total_functions,
-            "classes": total_classes
-        });
-
-        serde_json::to_string_pretty(&json_data).map_err(SaveError::Json)
-    }
-
-    /// 将报告转换为 CSV 格式字符串
-    fn report_to_csv(report: &Report) -> Result<String, SaveError> {
-        let mut csv_data = String::new();
-
-        // CSV 头部
-        csv_data.push_str("Language,Files,Lines,Code,Comments,Blanks,Functions,Classes\n");
-
-        // 收集并排序数据
-        let mut items: Vec<_> = report.into_iter().collect();
-        items.sort_by(|a, b| b.1.lines.cmp(&a.1.lines));
-
-        let mut total_files = 0;
-        let mut total_lines = 0;
-        let mut total_code = 0;
-        let mut total_comments = 0;
-        let mut total_blanks = 0;
-        let mut total_functions = 0;
-
-        // 写入每种语言的数据
-        for (lang, stat) in items {
-            csv_data.push_str(&format!(
-                "{},{},{},{},{},{},{}\n",
-                lang.to_string(),
-                stat.files,
-                stat.lines,
-                stat.code,
-                stat.comments,
-                stat.blanks,
-                stat.functions,
-            ));
-
-            total_files += stat.files;
-            total_lines += stat.lines;
-            total_code += stat.code;
-            total_comments += stat.comments;
-            total_blanks += stat.blanks;
-            total_functions += stat.functions;
-        }
-
-        // 添加分隔线
-        csv_data.push_str(",,,,,,,,\n");
-
-        // 添加总计行
-        csv_data.push_str(&format!(
-            "Total,{},{},{},{},{},{}\n",
-            total_files, total_lines, total_code, total_comments, total_blanks, total_functions
-        ));
-
-        Ok(csv_data)
-    }
+/// 便捷函数：将报告保存到指定文件
+///
+/// # Arguments
+/// * `report` - 要保存的报告
+/// * `path` - 文件路径
+/// * `format` - 输出格式
+pub fn save_report<P: AsRef<std::path::Path>>(
+    report: &Report,
+    path: P,
+    format: OutputFormat,
+) -> Result<(), SaveError> {
+    FileSaver::save_report(report, path, format)
 }
 
-/// 保存错误类型
-#[derive(Debug)]
-pub enum SaveError {
-    Io(std::io::Error),
-    Json(serde_json::Error),
-    UnsupportedFormat,
+/// 便捷函数：将报告导出为 JSON 字符串
+pub fn report_to_json(report: &Report) -> Result<String, SaveError> {
+    let mut buffer = Vec::new();
+    let exporter = JsonExporter::new();
+    exporter.export(report, &mut buffer)?;
+    Ok(String::from_utf8(buffer).map_err(|e| SaveError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?)
 }
 
-impl std::fmt::Display for SaveError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SaveError::Io(e) => write!(f, "IO error: {}", e),
-            SaveError::Json(e) => write!(f, "JSON error: {}", e),
-            SaveError::UnsupportedFormat => write!(f, "Unsupported output format for saving"),
-        }
+/// 便捷函数：将报告导出为 CSV 字符串
+pub fn report_to_csv(report: &Report) -> Result<String, SaveError> {
+    let mut buffer = Vec::new();
+    let exporter = CsvExporter::new();
+    exporter.export(report, &mut buffer)?;
+    Ok(String::from_utf8(buffer).map_err(|e| SaveError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?)
+}
+
+/// 便捷函数：将报告写入到任意实现了 Write 的目标中
+///
+/// 这个函数允许将报告导出到标准输出、内存缓冲区或任何其他实现了 Write trait 的目标
+pub fn export_report<W: std::io::Write>(
+    report: &Report,
+    writer: &mut W,
+    format: OutputFormat,
+) -> Result<(), SaveError> {
+    match format {
+        OutputFormat::Json => {
+            let exporter = crate::saver::JsonExporter::new();
+            exporter.export(report, writer)
+        },
+        OutputFormat::Csv => {
+            let exporter = crate::saver::CsvExporter::new();
+            exporter.export(report, writer)
+        },
+        OutputFormat::Text => Err(SaveError::UnsupportedFormat),
     }
 }
-
-impl std::error::Error for SaveError {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::langs::lang_type::LangType;
-    use crate::stats::{LangStat, FileStat};
-    use std::collections::HashMap;
+    use crate::stats::FileStat;
 
     fn create_test_report() -> Report {
         let mut report = Report::new();
@@ -208,7 +96,7 @@ mod tests {
     #[test]
     fn test_json_conversion() {
         let report = create_test_report();
-        let json_str = FileSaver::report_to_json(&report).unwrap();
+        let json_str = report_to_json(&report).unwrap();
 
         // 验证 JSON 包含预期字段
         assert!(json_str.contains("languages"));
@@ -220,7 +108,7 @@ mod tests {
     #[test]
     fn test_csv_conversion() {
         let report = create_test_report();
-        let csv_str = FileSaver::report_to_csv(&report).unwrap();
+        let csv_str = report_to_csv(&report).unwrap();
 
         // 验证 CSV 包含头部
         assert!(csv_str.contains("Language,Files"));

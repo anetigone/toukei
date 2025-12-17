@@ -1,0 +1,43 @@
+{
+  "languages": [
+    {
+      "blanks": 580,
+      "classes": 0,
+      "code": 3069,
+      "comments": 288,
+      "files": 43,
+      "functions": 2092,
+      "language": "Rust",
+      "lines": 3937
+    },
+    {
+      "blanks": 0,
+      "classes": 0,
+      "code": 0,
+      "comments": 0,
+      "files": 3,
+      "functions": 0,
+      "language": "Markdown",
+      "lines": 608
+    },
+    {
+      "blanks": 4,
+      "classes": 0,
+      "code": 24,
+      "comments": 0,
+      "files": 2,
+      "functions": 0,
+      "language": "Toml",
+      "lines": 28
+    }
+  ],
+  "total": {
+    "blanks": 584,
+    "classes": 0,
+    "code": 3093,
+    "comments": 288,
+    "files": 48,
+    "functions": 2092,
+    "lines": 4573
+  }
+}

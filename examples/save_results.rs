@@ -1,7 +1,7 @@
 use toukei::config::Config;
 use toukei::fc::FileCounter;
 use toukei::utils::format::OutputFormat;
-use toukei::utils::save::FileSaver;
+use toukei::saver::FileSaver;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 

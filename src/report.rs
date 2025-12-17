@@ -8,6 +8,8 @@ pub struct Report {
     pub inner: HashMap<LangType, LangStat>,
 }
 
+pub type StatItem<'a> = (&'a LangType, &'a LangStat);
+
 impl Report {
     pub fn new() -> Self {
         Report {
@@ -44,5 +46,16 @@ impl<'a> IntoIterator for &'a Report {
 
     fn into_iter(self) -> Self::IntoIter {
         self.inner.iter()
+    }
+}
+
+impl Report {
+    pub fn sort_stats<C>(&self, cmp: C) -> Vec<StatItem<'_>>
+    where 
+        C: FnMut(&StatItem<'_>, &StatItem<'_>) -> std::cmp::Ordering
+    {
+        let mut items: Vec<_> = self.inner.iter().collect();
+        items.sort_by(cmp);
+        items
     }
 }
