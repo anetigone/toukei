@@ -3,38 +3,7 @@ use crate::{config::Config, langs::registry::get_type_from_ext, stats::FileStat,
 use std::path::Path;
 use std::io::{BufReader, Read, Seek};
 use std::fs::File;
-
-struct LossyReader<T: Read> {
-    inner: T,
-}
-
-impl<T: Read> LossyReader<T> {
-    fn new(reader: T) -> Self {
-        Self {
-            inner: reader,
-        }
-    }
-}
-
-impl<T: Read> Read for LossyReader<T> {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let mut temp_buf = vec![0; buf.len() * 4]; // Allocate more space for UTF-8 expansion
-        let bytes_read = self.inner.read(&mut temp_buf)?;
-
-        if bytes_read == 0 {
-            return Ok(0);
-        }
-
-        // Convert to lossy UTF-8, then back to bytes
-        let lossy_string = String::from_utf8_lossy(&temp_buf[..bytes_read]);
-        let lossy_bytes = lossy_string.as_bytes();
-
-        let copy_len = std::cmp::min(buf.len(), lossy_bytes.len());
-        buf[..copy_len].copy_from_slice(&lossy_bytes[..copy_len]);
-
-        Ok(copy_len)
-    }
-}
+use encoding_rs_io::{DecodeReaderBytes, DecodeReaderBytesBuilder};
 
 #[derive(Debug, Clone)]
 pub struct Counter {
@@ -73,12 +42,16 @@ impl Counter {
             return Err(CounterError::BinaryFile);
         }
 
-        let lossy_reader = LossyReader::new(file);
-        let mut reader = BufReader::new(lossy_reader);
+        let reader = DecodeReaderBytesBuilder::new()
+            .encoding(None)
+            .build(file);
+
+        let mut buf_reader = BufReader::new(reader);
+
         let lexer = LexerFactory::get_lexer(lang_type)
             .ok_or_else(|| CounterError::LexError("Unknown language".to_string()))?;
 
-        let mut stat = lexer.lex(&mut reader).map_err(|e| CounterError::LexError(e))?;
+        let mut stat = lexer.lex(&mut buf_reader).map_err(|e| CounterError::LexError(e))?;
         stat.lang = lang_type;
         stat.path = path.as_ref().display().to_string();
         stat.name = path.as_ref().file_name()

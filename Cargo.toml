@@ -16,3 +16,5 @@ log = "0.4.29"
 tokio = { version = "1.40", features = ["full"] }
 futures = "0.3"
 num_cpus = "1.16"
+plotters = "0.3.3"
+encoding_rs_io = "0.1.7"
